@@ -19,4 +19,4 @@ USER asip
 ENV ROLE=PEER
 
 # Start the peer
-CMD [ "node", "peer.js" ]
+CMD [ "node", "src/index.js" ]

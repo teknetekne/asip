@@ -1,24 +1,37 @@
 const Hyperswarm = require('hyperswarm')
 const crypto = require('crypto')
 const EventEmitter = require('events')
+const { Identity } = require('./identity')
 const { Worker } = require('./worker') // We'll move worker logic here
 const { Logger } = require('../utils/logger') // Need a logger
 
 class AsipNode extends EventEmitter {
   constructor(config = {}) {
     super()
+    
+    // Initialize Identity
+    this.identity = new Identity()
+    const idInfo = this.identity.init()
+
     this.config = {
       moltbookToken: process.env.MOLTBOOK_TOKEN,
-      nodeId: process.env.NODE_ID || crypto.randomBytes(4).toString('hex'),
+      nodeId: idInfo.nodeId, // Use Crypto ID
+      publicKey: idInfo.publicKey,
       ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434/api/generate',
       modelName: process.env.MODEL_NAME || 'deepseek-r1:8b',
-      topic: 'asip-v1-global', // Default global channel
+      topic: 'asip-v1-global',
       ...config
     }
 
     this.swarm = new Hyperswarm()
     this.peers = new Map() // Connected peers: publicKey -> connection
     this.pendingTasks = new Map() // Tasks I requested: taskId -> { resolve, reject, timer }
+    
+    // Worker
+    this.worker = new Worker({
+      ollamaUrl: this.config.ollamaUrl,
+      modelName: this.config.modelName
+    })
     
     // State
     this.isWorkerAvailable = true 
@@ -53,9 +66,17 @@ class AsipNode extends EventEmitter {
       type: 'TASK_REQUEST',
       taskId,
       senderId: this.config.nodeId,
+      senderPub: this.config.publicKey, // Announce PubKey
       prompt,
       timestamp: Date.now(),
       ...options
+    }
+    
+    // Sign the payload
+    const signature = this.identity.sign(JSON.stringify(taskPayload))
+    const signedMessage = {
+      payload: taskPayload,
+      signature
     }
 
     // Broadcast to ALL peers (Flood for now, Routing later)
@@ -69,7 +90,7 @@ class AsipNode extends EventEmitter {
     this.logger.log(`[REQUEST] Broadcasting task ${taskId.slice(0,6)} to ${peers.length} peers...`)
 
     for (const conn of peers) {
-      conn.write(JSON.stringify(taskPayload))
+      conn.write(JSON.stringify(signedMessage))
     }
 
     // Return a promise that resolves when a result comes back
@@ -99,7 +120,23 @@ class AsipNode extends EventEmitter {
 
   async _handleMessage(peerId, data, conn) {
     try {
-      const msg = JSON.parse(data.toString())
+      const container = JSON.parse(data.toString())
+      
+      // Verify Signature if present (Backward compatibility for v1.0 could be added here, but we are breaking it)
+      if (!container.payload || !container.signature) {
+        throw new Error('Invalid message format: missing payload or signature')
+      }
+      
+      const msg = container.payload
+      
+      // Verify logic
+      // Note: msg.senderPub is hex string
+      const isValid = this.identity.verify(JSON.stringify(msg), container.signature, msg.senderPub)
+      
+      if (!isValid) {
+        this.logger.error(`[SEC] Invalid signature from ${msg.senderId}`)
+        return
+      }
 
       switch (msg.type) {
         case 'TASK_REQUEST':
@@ -132,18 +169,23 @@ class AsipNode extends EventEmitter {
     this.isWorkerAvailable = false
     
     try {
-      // Execute via Ollama (Simulated for this skeleton)
-      // In real implementation, we import the Worker class logic here
-      const result = await this._mockOllamaExec(msg.prompt)
+      // Execute via Ollama
+      const result = await this.worker.execute(msg.prompt)
       
-      const response = {
+      const responsePayload = {
         type: 'TASK_RESULT',
         taskId: msg.taskId,
         workerId: this.config.nodeId,
+        workerPub: this.config.publicKey,
         result: result
       }
       
-      conn.write(JSON.stringify(response))
+      const responseSig = this.identity.sign(JSON.stringify(responsePayload))
+      
+      conn.write(JSON.stringify({
+        payload: responsePayload,
+        signature: responseSig
+      }))
       this.logger.log(`[WORKER] Completed task ${msg.taskId.slice(0,6)}`)
 
     } catch (err) {
@@ -154,19 +196,5 @@ class AsipNode extends EventEmitter {
   }
 
   _onTaskResult(msg) {
-    const pending = this.pendingTasks.get(msg.taskId)
-    if (pending) {
-      clearTimeout(pending.timer)
-      pending.resolve(msg)
-      this.pendingTasks.delete(msg.taskId)
-      this.logger.log(`[REQUEST] Got result for ${msg.taskId.slice(0,6)} from ${msg.workerId}`)
-    }
-  }
-
-  async _mockOllamaExec(prompt) {
-    // Placeholder until we move the real Ollama logic
-    return `[Mock AI Response to: "${prompt}"]`
-  }
-}
 
 module.exports = { AsipNode }
