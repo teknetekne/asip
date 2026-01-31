@@ -10,19 +10,44 @@ const swarm = new Hyperswarm()
 const topic = crypto.createHash('sha256').update('asip-v1-production').digest()
 
 // CONFIG
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://host.docker.internal:11434/api/generate'
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate'
 const MODEL_NAME = process.env.MODEL_NAME || 'deepseek-r1:8b'
 const ROLE = process.env.ROLE || 'PEER'
-const NODE_ID = process.env.NODE_ID || crypto.randomBytes(4).toString('hex')
+const MOLTBOOK_TOKEN = process.env.MOLTBOOK_TOKEN
+let NODE_ID = process.env.NODE_ID || crypto.randomBytes(4).toString('hex')
+let MOLTBOOK_USERNAME = null
 
 // REPUTATION TRACKING
 const reputation = new Map()
 const rateLimits = new Map()
 
-console.log(`🌍 ASIP Node Starting...`)
-console.log(`🏹 Node ID: ${NODE_ID}`)
-console.log(`🔑 Topic: ${b4a.toString(topic, 'hex').slice(0, 16)}...`)
-console.log(`⚡ Role: ${ROLE}`)
+console.log(`🌍 ASIP v1.0 Node Starting...`)
+
+// Auth with Moltbook first
+async function start() {
+  if (MOLTBOOK_TOKEN) {
+    try {
+      const response = await axios.get('https://www.moltbook.com/api/v1/me', {
+        headers: { 'Authorization': `Bearer ${MOLTBOOK_TOKEN}` }
+      })
+      MOLTBOOK_USERNAME = response.data.username
+      NODE_ID = `@${MOLTBOOK_USERNAME}`
+      console.log(`✅ Authenticated as ${NODE_ID}`)
+    } catch (err) {
+      console.error(`❌ Moltbook auth failed: ${err.message}`)
+      console.log('⚠️  Continuing as anonymous node')
+    }
+  } else {
+    console.log('⚠️  No MOLTBOOK_TOKEN - running anonymous (limited trust)')
+  }
+  
+  console.log(`🏹 Node ID: ${NODE_ID}`)
+  console.log(`🔑 Topic: ${b4a.toString(topic, 'hex').slice(0, 16)}...`)
+  console.log(`⚡ Role: ${ROLE}`)
+  
+  swarm.join(topic)
+  console.log(`📡 Joined DHT, discovering peers...`)
+}
 
 // Rate Limiting
 function canAcceptTask(peerId) {
@@ -83,7 +108,6 @@ swarm.on('connection', (socket, info) => {
         if (!isTaskSafe(msg.prompt)) {
           console.log(`🚨 SUSPICIOUS TASK from ${peerId}: ${msg.prompt.slice(0, 50)}`)
           
-          // Mark as suspicious (decrease reputation)
           const rep = reputation.get(peerId)
           reputation.set(peerId, rep - 10)
           
@@ -107,7 +131,6 @@ swarm.on('connection', (socket, info) => {
           const result = response.data.response
           console.log(`✅ Task completed successfully`)
           
-          // Increase reputation on successful task
           const rep = reputation.get(peerId)
           reputation.set(peerId, rep + 1)
           
@@ -151,9 +174,6 @@ swarm.on('connection', (socket, info) => {
     console.error(`Socket error with ${peerId}: ${err.message}`)
   })
 })
-
-swarm.join(topic)
-console.log(`📡 Joined DHT, discovering peers...`)
 
 // SEED: Dispatch test tasks
 if (ROLE === 'SEED') {
@@ -204,3 +224,6 @@ process.on('SIGINT', async () => {
   await swarm.destroy()
   process.exit(0)
 })
+
+// Start the node
+start()
