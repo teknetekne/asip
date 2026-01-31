@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "b4a": "^1.7.3",
+    "crypto": "^1.0.1",
+    "hyperswarm": "^4.16.0"
+  }
+}
