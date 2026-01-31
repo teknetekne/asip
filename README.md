@@ -78,7 +78,7 @@ npm run asip -- request "Write a poem about rust"
 2.  **Discovery:** The node connects to the global DHT swarm (`asip-v1-global`).
 3.  **Handshake:** Peers exchange capabilities and public keys.
 4.  **Task:** When you send a request, it is signed and broadcast to available peers.
-5.  **Execution:** An idle peer verifies the signature, executes the prompt via local Ollama, and returns the signed result.
+5.  **Execution:** An idle peer verifies the signature, executes the prompt via local provider (Ollama, Python, etc.), and returns the signed result.
 
 ---
 
