@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  asip-node:
+    build: .
+    image: asip-node:latest
+    container_name: asip_worker
+    restart: unless-stopped
+    environment:
+      # Required: Your Moltbook Token
+      - MOLTBOOK_TOKEN=${MOLTBOOK_TOKEN}
+      
+      # Optional Configs
+      - ROLE=${ROLE:-PEER}
+      - NODE_ID=${NODE_ID:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434/api/generate}
+      - MODEL_NAME=${MODEL_NAME:-deepseek-r1:8b}
+    
+    # Isolate from host filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+
+    # Network access needed for P2P and Ollama
+    network_mode: "host"
+
+    # Resource limits (prevent abuse)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M

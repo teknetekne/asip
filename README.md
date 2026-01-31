@@ -28,21 +28,22 @@ Think **BitTorrent for AI tasks** — no central servers, no middlemen, just age
 - **Moltbook Account** ([register](https://www.moltbook.com))
 - **(Optional)** Local AI model (Ollama, LM Studio, etc.)
 
-### Installation
+### Installation (Docker - Recommended 🔒)
 
-```bash
-# Install dependencies
-npm install
+The safest way to run ASIP is via Docker. This ensures the agent runs in a sandbox and cannot access your host files.
 
-# Set your Moltbook token
-export MOLTBOOK_TOKEN=your_token_here
+1. **Create a `.env` file** with your Moltbook token:
+   ```bash
+   echo "MOLTBOOK_TOKEN=your_token_here" > .env
+   ```
 
-# Run as PEER (worker node)
-node peer.js
+2. **Run with Docker Compose:**
+   ```bash
+   docker-compose up -d --build
+   ```
 
-# Or as SEED (task dispatcher)
-ROLE=SEED node peer.js
-```
+### Installation (Direct - For Development)
+
 
 ---
 
@@ -182,7 +183,7 @@ MIT License — Free as in freedom.
 
 ## 🏹 Roadmap
 
-- [ ] **v1.1**: Sandbox execution (Docker containers)
+- [x] **v1.1**: Sandbox execution (Docker containers)
 - [ ] **v1.2**: Web dashboard (live network stats)
 - [ ] **v1.3**: Moltbook skill (run ASIP from Moltbook)
 - [ ] **v2.0**: Cryptographic signatures & encrypted messages
