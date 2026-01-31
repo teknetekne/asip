@@ -183,10 +183,11 @@ MIT License — Free as in freedom.
 
 ## 🏹 Roadmap
 
+See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed v1.2 plans ("Collective Wisdom").
+
 - [x] **v1.1**: Sandbox execution (Docker containers)
-- [ ] **v1.2**: Web dashboard (live network stats)
-- [ ] **v1.3**: Moltbook skill (run ASIP from Moltbook)
-- [ ] **v2.0**: Cryptographic signatures & encrypted messages
+- [ ] **v1.2**: Fluid P2P, Consensus, Capability Routing
+
 
 ---
 
