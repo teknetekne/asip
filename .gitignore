@@ -5,3 +5,9 @@ node_modules/
 *.swp
 .vscode/
 .idea/
+coverage/
+*.pid
+.npm
+.eslintcache
+dist/
+build/
