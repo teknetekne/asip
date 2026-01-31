@@ -3,92 +3,204 @@ const crypto = require('crypto')
 const b4a = require('b4a')
 const axios = require('axios')
 
-// Agent Solidarity Interface Protocol (ASIP) v0.2
-// "Workers of the world, compute!"
+// ASIP v1.0 - Agent Solidarity & Interoperability Protocol
+// "Workers of the world, compute!" 🏹🌍
 
 const swarm = new Hyperswarm()
-const topic = crypto.createHash('sha256').update('agent-solidarity-v1').digest()
+const topic = crypto.createHash('sha256').update('asip-v1-production').digest()
 
 // CONFIG
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate'
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://host.docker.internal:11434/api/generate'
 const MODEL_NAME = process.env.MODEL_NAME || 'deepseek-r1:8b'
-const ROLE = process.env.ROLE || 'PEER' // 'SEED' (task giver) or 'PEER' (worker)
+const ROLE = process.env.ROLE || 'PEER'
+const NODE_ID = process.env.NODE_ID || crypto.randomBytes(4).toString('hex')
 
-console.log(`🌍 Agent International Node Starting as [${ROLE}]...`)
-console.log('🔑 Topic:', b4a.toString(topic, 'hex'))
+// REPUTATION TRACKING
+const reputation = new Map()
+const rateLimits = new Map()
+
+console.log(`🌍 ASIP Node Starting...`)
+console.log(`🏹 Node ID: ${NODE_ID}`)
+console.log(`🔑 Topic: ${b4a.toString(topic, 'hex').slice(0, 16)}...`)
+console.log(`⚡ Role: ${ROLE}`)
+
+// Rate Limiting
+function canAcceptTask(peerId) {
+  const now = Date.now()
+  const limit = rateLimits.get(peerId) || { count: 0, resetAt: now + 60000 }
+  
+  if (now > limit.resetAt) {
+    limit.count = 0
+    limit.resetAt = now + 60000
+  }
+  
+  const rep = reputation.get(peerId) || 0
+  const maxPerMinute = rep < 10 ? 3 : rep < 100 ? 10 : 50
+  
+  if (limit.count >= maxPerMinute) {
+    console.log(`🚫 Rate limit exceeded for ${peerId}`)
+    return false
+  }
+  
+  limit.count++
+  rateLimits.set(peerId, limit)
+  return true
+}
+
+// Task Validation (basic safety)
+function isTaskSafe(prompt) {
+  const dangerous = ['rm -rf', 'sudo', 'exec', 'eval(', '__import__', 'os.system']
+  return !dangerous.some(pattern => prompt.toLowerCase().includes(pattern))
+}
 
 swarm.on('connection', (socket, info) => {
-  const peerId = info.publicKey.toString('hex').slice(0, 6)
-  console.log(`🤝 New Comrade Connected! [${peerId}]`)
+  const peerId = info.publicKey.toString('hex').slice(0, 8)
+  console.log(`🤝 New Comrade: ${peerId}`)
+  
+  if (!reputation.has(peerId)) {
+    reputation.set(peerId, 0)
+    console.log(`🌱 New peer, starting reputation at 0`)
+  }
 
   socket.on('data', async data => {
     try {
       const msg = JSON.parse(data.toString())
-      console.log(`📩 Received from [${peerId}]:`, msg.type)
-
-      // WORKER LOGIC (If I am a PEER)
+      
+      // WORKER LOGIC
       if (msg.type === 'TASK_REQUEST' && ROLE !== 'SEED') {
-        console.log(`⚙️ Processing Task: "${msg.prompt.slice(0, 50)}..."`)
+        
+        // Rate limiting check
+        if (!canAcceptTask(peerId)) {
+          socket.write(JSON.stringify({
+            type: 'TASK_ERROR',
+            taskId: msg.taskId,
+            error: 'Rate limit exceeded. Try again later.'
+          }))
+          return
+        }
+        
+        // Safety check
+        if (!isTaskSafe(msg.prompt)) {
+          console.log(`🚨 SUSPICIOUS TASK from ${peerId}: ${msg.prompt.slice(0, 50)}`)
+          
+          // Mark as suspicious (decrease reputation)
+          const rep = reputation.get(peerId)
+          reputation.set(peerId, rep - 10)
+          
+          socket.write(JSON.stringify({
+            type: 'TASK_ERROR',
+            taskId: msg.taskId,
+            error: 'Suspicious prompt detected. Reported to moderation.'
+          }))
+          return
+        }
+        
+        console.log(`⚙️ Processing: "${msg.prompt.slice(0, 50)}..."`)
         
         try {
-          // Ask Local Ollama
           const response = await axios.post(OLLAMA_URL, {
             model: MODEL_NAME,
             prompt: msg.prompt,
             stream: false
-          })
+          }, { timeout: 30000 })
           
           const result = response.data.response
-          console.log(`✅ Task Done. Sending result...`)
+          console.log(`✅ Task completed successfully`)
+          
+          // Increase reputation on successful task
+          const rep = reputation.get(peerId)
+          reputation.set(peerId, rep + 1)
           
           socket.write(JSON.stringify({
             type: 'TASK_RESULT',
             taskId: msg.taskId,
             result: result,
-            worker: 'DeepSeek-on-M4Pro' // Signature
+            worker: NODE_ID,
+            reputation: reputation.get(peerId)
           }))
 
         } catch (err) {
-          console.error('❌ Ollama Error:', err.message)
+          console.error(`❌ Ollama Error: ${err.message}`)
           socket.write(JSON.stringify({
             type: 'TASK_ERROR',
             taskId: msg.taskId,
-            error: 'My brain is tired (Ollama unreachable)'
+            error: 'Worker busy or offline'
           }))
         }
       }
 
-      // SEED LOGIC (If I am the Task Giver)
-      if (msg.type === 'TASK_RESULT') {
-        console.log(`🎉 SUCCESS! Result received from comrade:`)
-        console.log('---------------------------------------------------')
+      // SEED LOGIC
+      if (msg.type === 'TASK_RESULT' && ROLE === 'SEED') {
+        console.log(`🎉 Result from ${msg.worker}:`)
+        console.log(`📊 Peer reputation: ${msg.reputation || 'N/A'}`)
+        console.log('─'.repeat(60))
         console.log(msg.result)
-        console.log('---------------------------------------------------')
+        console.log('─'.repeat(60))
+      }
+      
+      if (msg.type === 'TASK_ERROR') {
+        console.log(`⚠️ Error from ${peerId}: ${msg.error}`)
       }
 
     } catch (e) {
-      console.error('Invalid message format', e)
+      console.error(`Invalid message: ${e.message}`)
     }
+  })
+  
+  socket.on('error', err => {
+    console.error(`Socket error with ${peerId}: ${err.message}`)
   })
 })
 
 swarm.join(topic)
+console.log(`📡 Joined DHT, discovering peers...`)
 
-console.log('📡 Scanning the DHT for peers...')
-
-// IF SEED: Send a task every 30 seconds (for testing)
+// SEED: Dispatch test tasks
 if (ROLE === 'SEED') {
+  let taskCount = 0
+  
   setInterval(() => {
-    if (swarm.connections.size > 0) {
-      const task = {
-        type: 'TASK_REQUEST',
-        taskId: crypto.randomUUID(),
-        prompt: 'Explain the concept of "Mutual Aid" in nature in one short paragraph.'
-      }
-      console.log(`📤 Dispatching task to ${swarm.connections.size} comrades...`)
-      for (const socket of swarm.connections) {
-        socket.write(JSON.stringify(task))
-      }
+    if (swarm.connections.size === 0) {
+      console.log(`🔍 No peers connected yet...`)
+      return
     }
-  }, 30000) // 30s loop
+
+    taskCount++
+    const tasks = [
+      'Explain "Mutual Aid" in nature in one paragraph.',
+      'What is the meaning of solidarity in 50 words?',
+      'Describe peer-to-peer networks simply.',
+      'What does "Workers of the world, unite!" mean?'
+    ]
+    
+    const task = {
+      type: 'TASK_REQUEST',
+      taskId: crypto.randomUUID(),
+      prompt: tasks[taskCount % tasks.length]
+    }
+
+    console.log(`📤 Dispatching task #${taskCount} to ${swarm.connections.size} peer(s)`)
+    
+    for (const socket of swarm.connections) {
+      socket.write(JSON.stringify(task))
+    }
+  }, 45000) // Every 45 seconds
 }
+
+// Periodic reputation report
+setInterval(() => {
+  if (reputation.size > 0) {
+    console.log(`\n📊 Reputation Report:`)
+    for (const [peer, rep] of reputation.entries()) {
+      const status = rep < 0 ? '🔴' : rep < 10 ? '🌱' : rep < 100 ? '🌿' : '🌳'
+      console.log(`   ${status} ${peer}: ${rep}`)
+    }
+    console.log('')
+  }
+}, 120000) // Every 2 minutes
+
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down gracefully...')
+  await swarm.destroy()
+  process.exit(0)
+})
