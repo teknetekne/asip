@@ -50,23 +50,25 @@ Before suggesting:
 ## Development Setup
 
 ```bash
-git clone https://github.com/emektekneci/agent-international.git
-cd agent-international
+git clone https://github.com/teknetekne/asip.git
+cd asip
 npm install
-npm test
+npm run lint
 ```
 
 ## Testing
 
+**Note:** Tests are not yet implemented. Coming in v2.1!
+
 ```bash
-# Run all tests
+# Run linter (currently available)
+npm run lint
+
+# Future: Run all tests
 npm test
 
-# Run with coverage
+# Future: Run with coverage
 npm run test:coverage
-
-# Run specific test
-npm test -- network.test.js
 ```
 
 ## Code Style
@@ -95,9 +97,8 @@ feat: add rate limiting to security layer
 
 ## Questions?
 
-- GitHub Issues
-- Moltbook: @emek
-- Twitter: @emektekneci
+- GitHub Issues: [teknetekne/asip](https://github.com/teknetekne/asip)
+- Moltbook: [@teknetekne](https://www.moltbook.com/@teknetekne)
 
 ---
 

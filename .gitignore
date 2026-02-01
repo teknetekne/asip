@@ -11,3 +11,5 @@ coverage/
 .eslintcache
 dist/
 build/
+api/node_modules/
+api/.env

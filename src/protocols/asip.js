@@ -3,17 +3,17 @@
  * Implements the Agent Solidarity & Interoperability Protocol v1.0
  */
 
-const crypto = require('crypto');
+const crypto = require('crypto')
 
 class ASIPProtocol {
   constructor({ network, reputation, security, ollama }) {
-    this.network = network;
-    this.reputation = reputation;
-    this.security = security;
-    this.ollamaUrl = ollama.url;
-    this.ollamaModel = ollama.model;
+    this.network = network
+    this.reputation = reputation
+    this.security = security
+    this.ollamaUrl = ollama.url
+    this.ollamaModel = ollama.model
     
-    this._setupHandlers();
+    this._setupHandlers()
   }
 
   /**
@@ -21,12 +21,12 @@ class ASIPProtocol {
    */
   _setupHandlers() {
     this.network.on('peer:connected', ({ peerId }) => {
-      this.reputation.initPeer(peerId);
-    });
+      this.reputation.initPeer(peerId)
+    })
 
     this.network.on('message', async ({ peerId, message }) => {
-      await this._handleMessage(peerId, message);
-    });
+      await this._handleMessage(peerId, message)
+    })
   }
 
   /**
@@ -35,25 +35,25 @@ class ASIPProtocol {
   async _handleMessage(peerId, message) {
     // Check if peer is banned
     if (this.reputation.isBanned(peerId)) {
-      console.log(`🚫 Ignoring message from banned peer ${peerId}`);
-      return;
+      console.log(`🚫 Ignoring message from banned peer ${peerId}`)
+      return
     }
 
     switch (message.type) {
-      case 'TASK_REQUEST':
-        await this._handleTaskRequest(peerId, message);
-        break;
+    case 'TASK_REQUEST':
+      await this._handleTaskRequest(peerId, message)
+      break
       
-      case 'TASK_RESULT':
-        this._handleTaskResult(peerId, message);
-        break;
+    case 'TASK_RESULT':
+      this._handleTaskResult(peerId, message)
+      break
       
-      case 'TASK_ERROR':
-        this._handleTaskError(peerId, message);
-        break;
+    case 'TASK_ERROR':
+      this._handleTaskError(peerId, message)
+      break
       
-      default:
-        console.log(`Unknown message type from ${peerId}: ${message.type}`);
+    default:
+      console.log(`Unknown message type from ${peerId}: ${message.type}`)
     }
   }
 
@@ -62,51 +62,51 @@ class ASIPProtocol {
    */
   async _handleTaskRequest(peerId, message) {
     // Validate message structure
-    const validation = this.security.validateTaskRequest(message);
+    const validation = this.security.validateTaskRequest(message)
     if (!validation.valid) {
-      console.log(`❌ Invalid task from ${peerId}: ${validation.reason}`);
-      this._sendError(peerId, message.taskId, validation.reason);
-      return;
+      console.log(`❌ Invalid task from ${peerId}: ${validation.reason}`)
+      this._sendError(peerId, message.taskId, validation.reason)
+      return
     }
 
     // Check rate limit
-    const reputationScore = this.reputation.getScore(peerId);
+    const reputationScore = this.reputation.getScore(peerId)
     if (!this.security.canAcceptTask(peerId, reputationScore)) {
-      this._sendError(peerId, message.taskId, 'Rate limit exceeded');
-      return;
+      this._sendError(peerId, message.taskId, 'Rate limit exceeded')
+      return
     }
 
     // Validate task safety
     if (!this.security.isTaskSafe(message.prompt)) {
-      console.log(`🚨 SUSPICIOUS TASK from ${peerId}: ${message.prompt.slice(0, 50)}`);
-      this.reputation.recordMalicious(peerId);
-      this._sendError(peerId, message.taskId, 'Suspicious prompt detected');
-      return;
+      console.log(`🚨 SUSPICIOUS TASK from ${peerId}: ${message.prompt.slice(0, 50)}`)
+      this.reputation.recordMalicious(peerId)
+      this._sendError(peerId, message.taskId, 'Suspicious prompt detected')
+      return
     }
 
     // Process task
-    await this._processTask(peerId, message);
+    await this._processTask(peerId, message)
   }
 
   /**
    * Process task with Ollama
    */
   async _processTask(peerId, message) {
-    console.log(`⚙️ Processing task from ${peerId}: "${message.prompt.slice(0, 50)}..."`);
+    console.log(`⚙️ Processing task from ${peerId}: "${message.prompt.slice(0, 50)}..."`)
 
     try {
-      const axios = require('axios');
+      const axios = require('axios')
       const response = await axios.post(this.ollamaUrl, {
         model: this.ollamaModel,
         prompt: message.prompt,
         stream: false
-      }, { timeout: 30000 });
+      }, { timeout: 30000 })
 
-      const result = response.data.response;
-      console.log(`✅ Task completed for ${peerId}`);
+      const result = response.data.response
+      console.log(`✅ Task completed for ${peerId}`)
 
       // Update reputation
-      this.reputation.recordSuccess(peerId);
+      this.reputation.recordSuccess(peerId)
 
       // Send result
       this.network.sendToPeer(peerId, {
@@ -115,11 +115,11 @@ class ASIPProtocol {
         result: result,
         worker: this.network.nodeId,
         reputation: this.reputation.getScore(peerId)
-      });
+      })
 
     } catch (err) {
-      console.error(`❌ Ollama error: ${err.message}`);
-      this._sendError(peerId, message.taskId, 'Worker busy or offline');
+      console.error(`❌ Ollama error: ${err.message}`)
+      this._sendError(peerId, message.taskId, 'Worker busy or offline')
     }
   }
 
@@ -127,18 +127,18 @@ class ASIPProtocol {
    * Handle task result
    */
   _handleTaskResult(peerId, message) {
-    console.log(`🎉 Result from ${message.worker || peerId}:`);
-    console.log(`📊 Peer reputation: ${message.reputation || 'N/A'}`);
-    console.log('─'.repeat(60));
-    console.log(message.result);
-    console.log('─'.repeat(60));
+    console.log(`🎉 Result from ${message.worker || peerId}:`)
+    console.log(`📊 Peer reputation: ${message.reputation || 'N/A'}`)
+    console.log('─'.repeat(60))
+    console.log(message.result)
+    console.log('─'.repeat(60))
   }
 
   /**
    * Handle task error
    */
   _handleTaskError(peerId, message) {
-    console.log(`⚠️ Error from ${peerId}: ${message.error}`);
+    console.log(`⚠️ Error from ${peerId}: ${message.error}`)
   }
 
   /**
@@ -149,7 +149,7 @@ class ASIPProtocol {
       type: 'TASK_ERROR',
       taskId: taskId,
       error: error
-    });
+    })
   }
 
   /**
@@ -160,18 +160,18 @@ class ASIPProtocol {
       type: 'TASK_REQUEST',
       taskId: crypto.randomUUID(),
       prompt: prompt
-    };
-
-    const peerCount = this.network.getPeerCount();
-    if (peerCount === 0) {
-      console.log('🔍 No peers connected yet...');
-      return null;
     }
 
-    console.log(`📤 Dispatching task to ${peerCount} peer(s)...`);
-    this.network.broadcast(task);
-    return task.taskId;
+    const peerCount = this.network.getPeerCount()
+    if (peerCount === 0) {
+      console.log('🔍 No peers connected yet...')
+      return null
+    }
+
+    console.log(`📤 Dispatching task to ${peerCount} peer(s)...`)
+    this.network.broadcast(task)
+    return task.taskId
   }
 }
 
-module.exports = ASIPProtocol;
+module.exports = ASIPProtocol

@@ -1,42 +1,44 @@
 {
-  "name": "@asip/node",
-  "version": "1.0.0",
-  "description": "Agent Solidarity & Interoperability Protocol - Decentralized P2P network for AI agents",
+  "name": "@asip/clawdbot",
+  "version": "2.0.0",
+  "description": "ASIP Protocol for Clawdbots - Decentralized P2P messaging network for AI agents with consensus and reputation",
   "main": "src/index.js",
   "bin": {
     "asip": "src/index.js"
   },
-  "bin": {
-    "asip": "./cli.js"
-  },
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/index.js",
     "test": "jest --coverage",
     "lint": "eslint src/",
-    "dev": "nodemon index.js"
+    "dev": "nodemon src/index.js"
   },
   "keywords": [
     "asip",
+    "clawdbot",
+    "clawdbots",
     "p2p",
     "ai-agents",
     "decentralized",
     "moltbook",
-    "solidarity",
+    "consensus",
+    "reputation",
     "hyperswarm",
-    "dht",
-    "reputation"
+    "dht"
   ],
   "author": "Emek (@emek on Moltbook)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/emektekneci/agent-international.git"
+    "url": "https://github.com/emektekneci/asip-clawdbot.git"
   },
-  "homepage": "https://emektekneci.github.io/agent-international",
   "dependencies": {
     "axios": "^1.13.4",
     "b4a": "^1.6.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "hyperswarm": "^4.8.5",
+    "mongoose": "^9.1.5",
     "sodium-native": "^5.0.10"
   },
   "devDependencies": {

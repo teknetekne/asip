@@ -3,14 +3,14 @@
  * Handles Moltbook OAuth and identity verification
  */
 
-const axios = require('axios');
+const axios = require('axios')
 
 class MoltbookAuth {
   constructor(config = {}) {
-    this.apiBase = config.apiBase || 'https://www.moltbook.com/api/v1';
-    this.token = config.token || null;
-    this.username = null;
-    this.authenticated = false;
+    this.apiBase = config.apiBase || 'https://www.moltbook.com/api/v1'
+    this.token = config.token || null
+    this.username = null
+    this.authenticated = false
   }
 
   /**
@@ -18,8 +18,8 @@ class MoltbookAuth {
    */
   async authenticate() {
     if (!this.token) {
-      console.log('⚠️  No MOLTBOOK_TOKEN - running anonymous (limited trust)');
-      return false;
+      console.log('⚠️  No MOLTBOOK_TOKEN - running anonymous (limited trust)')
+      return false
     }
 
     try {
@@ -28,17 +28,17 @@ class MoltbookAuth {
           'Authorization': `Bearer ${this.token}`
         },
         timeout: 5000
-      });
+      })
 
-      this.username = response.data.username;
-      this.authenticated = true;
-      console.log(`✅ Authenticated as @${this.username}`);
-      return true;
+      this.username = response.data.username
+      this.authenticated = true
+      console.log(`✅ Authenticated as @${this.username}`)
+      return true
 
     } catch (err) {
-      console.error(`❌ Moltbook auth failed: ${err.message}`);
-      console.log('⚠️  Continuing as anonymous node');
-      return false;
+      console.error(`❌ Moltbook auth failed: ${err.message}`)
+      console.log('⚠️  Continuing as anonymous node')
+      return false
     }
   }
 
@@ -46,7 +46,7 @@ class MoltbookAuth {
    * Get authenticated username
    */
   getUsername() {
-    return this.username;
+    return this.username
   }
 
   /**
@@ -54,23 +54,23 @@ class MoltbookAuth {
    */
   getNodeId(fallbackId) {
     if (this.authenticated && this.username) {
-      return `@${this.username}`;
+      return `@${this.username}`
     }
-    return fallbackId;
+    return fallbackId
   }
 
   /**
    * Check if authenticated
    */
   isAuthenticated() {
-    return this.authenticated;
+    return this.authenticated
   }
 
   /**
    * Verify token is still valid
    */
   async verifyToken() {
-    if (!this.token) return false;
+    if (!this.token) return false
 
     try {
       await axios.get(`${this.apiBase}/me`, {
@@ -78,12 +78,12 @@ class MoltbookAuth {
           'Authorization': `Bearer ${this.token}`
         },
         timeout: 3000
-      });
-      return true;
+      })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 }
 
-module.exports = MoltbookAuth;
+module.exports = MoltbookAuth

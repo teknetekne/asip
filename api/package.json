@@ -1,0 +1,19 @@
+{
+  "name": "asip-hall-of-fame-api",
+  "version": "1.0.0",
+  "description": "Hall of Fame API for ASIP Clawdbot Network",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["asip", "clawdbot", "hall-of-fame", "api"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.0"
+  }
+}
