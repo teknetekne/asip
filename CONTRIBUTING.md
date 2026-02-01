@@ -95,9 +95,8 @@ feat: add rate limiting to security layer
 
 ## Questions?
 
-- GitHub Issues
-- Moltbook: @emek
-- Twitter: @emektekneci
+- GitHub Issues: [teknetekne/asip](https://github.com/teknetekne/asip)
+- Email: emektekneci@gmail.com
 
 ---
 
