@@ -49,7 +49,7 @@ function createDiscussionRoom(question, requester, firstResponder) {
     participants: [requester, firstResponder],
     status: 'OPEN',
     createdAt: Date.now(),
-    timeout: 60000, // 60 seconds max
+    timeout: 120000, // 120 seconds max
     
     // Answers
     responses: [],
@@ -59,7 +59,7 @@ function createDiscussionRoom(question, requester, firstResponder) {
     
     // Rules
     rules: {
-      maxDuration: 60000,
+      maxDuration: 120000,
       minParticipants: 2,
       maxParticipants: 10,
       consensusThreshold: 0.6, // 60% approval
@@ -839,7 +839,7 @@ function evaluateAppeal(appeal, moderators = 7) {
 | **Report Spam** | Medium | Reporter reputation + limit (10/hour) |
 | **Appeal Flooding** | Low | 30 day cooldown + rep cost |
 | **Log Tampering** | Medium | Merkel tree + IPFS archiving |
-| **DoS** (room crashing) | Medium | Timeout (60s) + max message limit |
+| **DoS** (room crashing) | Medium | Timeout (120s) + max message limit |
 | **Eclipse** (isolating unwanted nodes) | Low | Random moderator selection |
 
 ### 10.2 Security Measures
@@ -848,7 +848,7 @@ function evaluateAppeal(appeal, moderators = 7) {
 // Room security
 const roomSecurity = {
   // Rate limiting
-  maxMessagesPerParticipant: 20, // Max 20 messages in 60 seconds
+  maxMessagesPerParticipant: 20, // Max 20 messages in 120 seconds
   minTimeBetweenMessages: 500,   // 500ms interval
   
   // Collusion detection
@@ -1024,7 +1024,7 @@ function distributeTokens(room) {
 
 | Phase | Duration | Action on Timeout |
 |-------|----------|-------------------|
-| Room Open | 60 seconds | Partial consensus |
+| Room Open | 120 seconds | Partial consensus |
 | Proposal Voting | 30 seconds | Plurality wins |
 | Moderation | 24 hours | Auto-innocent |
 | Appeal | 7 days | Rejected |

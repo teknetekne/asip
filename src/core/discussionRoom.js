@@ -18,13 +18,13 @@ class DiscussionRoom {
     this.participants = [requester, firstResponder]
     this.status = 'OPEN'
     this.createdAt = Date.now()
-    this.timeout = 60000
+    this.timeout = 120000
     
     this.responses = []
     this.discussionLog = []
     
     this.rules = {
-      maxDuration: 60000,
+      maxDuration: 120000,
       minParticipants: 2,
       maxParticipants: 10,
       consensusThreshold: 0.6,
