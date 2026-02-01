@@ -5,121 +5,138 @@
 
 class ReputationSystem {
   constructor() {
-    this.scores = new Map() // peerId -> score
-    this.history = new Map() // peerId -> [events]
+    this.scores = new Map()
+    this.history = new Map()
+    this.violationCounts = new Map()
+    
+    this.TRUST_THRESHOLDS = {
+      NEWCOMER: 0,
+      TRUSTED: 50,
+      COMRADE: 150,
+      ELITE: 300
+    }
+    
+    this.LEVEL_NAMES = {
+      'BANNED': '🔴 BANNED',
+      'NEWCOMER': '🌱 NEWCOMER',
+      'TRUSTED': '🌿 TRUSTED',
+      'COMRADE': '🌳 COMRADE',
+      'ELITE': '✨ ELITE'
+    }
   }
 
-  /**
-   * Get reputation score for a peer
-   */
   getScore(peerId) {
     return this.scores.get(peerId) || 0
   }
 
-  /**
-   * Get trust level based on score
-   */
   getTrustLevel(peerId) {
     const score = this.getScore(peerId)
     
     if (score < 0) return 'BANNED'
-    if (score < 10) return 'NEWCOMER'
-    if (score < 100) return 'TRUSTED'
-    return 'COMRADE'
+    if (score < this.TRUST_THRESHOLDS.TRUSTED) return 'NEWCOMER'
+    if (score < this.TRUST_THRESHOLDS.COMRADE) return 'TRUSTED'
+    if (score < this.TRUST_THRESHOLDS.ELITE) return 'COMRADE'
+    return 'ELITE'
   }
 
-  /**
-   * Get emoji indicator for trust level
-   */
   getTrustEmoji(peerId) {
     const level = this.getTrustLevel(peerId)
     const emojiMap = {
       'BANNED': '🔴',
       'NEWCOMER': '🌱',
       'TRUSTED': '🌿',
-      'COMRADE': '🌳'
+      'COMRADE': '🌳',
+      'ELITE': '✨'
     }
     return emojiMap[level]
   }
 
-  /**
-   * Initialize a new peer
-   */
   initPeer(peerId) {
     if (!this.scores.has(peerId)) {
       this.scores.set(peerId, 0)
       this.history.set(peerId, [])
+      this.violationCounts.set(peerId, {})
       console.log(`🌱 New peer ${peerId}, starting reputation at 0`)
     }
   }
 
-  /**
-   * Record a successful task completion
-   */
   recordSuccess(peerId) {
     const current = this.getScore(peerId)
     this.scores.set(peerId, current + 1)
     this._logEvent(peerId, 'task_success', +1)
   }
 
-  /**
-   * Record spam behavior
-   */
   recordSpam(peerId) {
     const current = this.getScore(peerId)
     this.scores.set(peerId, current - 5)
     this._logEvent(peerId, 'spam', -5)
   }
 
-  /**
-   * Record malicious behavior
-   */
   recordMalicious(peerId) {
     const current = this.getScore(peerId)
     this.scores.set(peerId, current - 10)
     this._logEvent(peerId, 'malicious', -10)
     console.log(`🚨 Malicious behavior from ${peerId}, reputation decreased`)
   }
+  
+  updateScore(peerId, delta, reason = 'MANUAL') {
+    const current = this.getScore(peerId)
+    this.scores.set(peerId, current + delta)
+    this._logEvent(peerId, reason, delta)
+    
+    const newLevel = this.getTrustLevel(peerId)
+    console.log(`[REP] ${peerId.slice(0,6)}: ${delta > 0 ? '+' : ''}${delta} (${newLevel})`)
+    
+    return current + delta
+  }
 
-  /**
-   * Check if peer is banned
-   */
   isBanned(peerId) {
     return this.getScore(peerId) < 0
   }
+  
+  isEligibleModerator(peerId) {
+    return this.getScore(peerId) >= this.TRUST_THRESHOLDS.COMRADE
+  }
 
-  /**
-   * Get reputation report
-   */
   getReport() {
     const report = {}
     for (const [peerId, score] of this.scores.entries()) {
       report[peerId] = {
         score,
         level: this.getTrustLevel(peerId),
-        emoji: this.getTrustEmoji(peerId)
+        emoji: this.getTrustEmoji(peerId),
+        fullName: this.LEVEL_NAMES[this.getTrustLevel(peerId)]
       }
     }
     return report
   }
 
-  /**
-   * Print reputation report to console
-   */
   printReport() {
     if (this.scores.size === 0) return
     
     console.log('\n📊 Reputation Report:')
     for (const [peerId, score] of this.scores.entries()) {
-      const emoji = this.getTrustEmoji(peerId)
-      console.log(`   ${emoji} ${peerId}: ${score}`)
+      const level = this.getTrustLevel(peerId)
+      console.log(`   ${this.LEVEL_NAMES[level]} ${peerId.slice(0,8)}: ${score}`)
     }
     console.log('')
   }
+  
+  getHistory(peerId) {
+    return this.history.get(peerId) || []
+  }
+  
+  getTopPeers(count = 10) {
+    return Array.from(this.scores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, count)
+      .map(([peerId, score]) => ({
+        peerId,
+        score,
+        level: this.getTrustLevel(peerId)
+      }))
+  }
 
-  /**
-   * Log an event to peer history
-   */
   _logEvent(peerId, type, change) {
     const history = this.history.get(peerId) || []
     history.push({

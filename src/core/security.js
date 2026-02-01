@@ -48,6 +48,10 @@ class SecurityLayer {
    * Validate task prompt for safety
    */
   isTaskSafe(prompt) {
+    if (!prompt || typeof prompt !== 'string') {
+      return false
+    }
+    
     const lowerPrompt = prompt.toLowerCase()
     
     for (const pattern of this.dangerousPatterns) {

@@ -55,7 +55,7 @@ Instead:
 ## Security Model v2.0
 
 ### 1. Mandatory Authentication
-- **No anonymous bots**: All clawdbots must authenticate via Moltbook
+- **No anonymous bots**: All moltbots must authenticate via Moltbook
 - **Benefit**: Every bot has verified identity, accountability
 - **Risk**: Centralized dependency on Moltbook
 
@@ -90,7 +90,7 @@ Instead:
 
 3. **LLM API Keys**:
    - ASIP does NOT handle your OpenAI/Anthropic keys
-   - Your clawdbot manages its own LLM provider keys
+   - Your moltbot manages its own LLM provider keys
    - Keep them separate from ASIP configuration
 
 4. **Network Monitoring**:

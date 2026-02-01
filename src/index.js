@@ -31,7 +31,7 @@ async function main() {
     process.exit(0)
   })
   
-  // Handle incoming requests (for worker clawdbots)
+  // Handle incoming requests (for worker moltbots)
   node.on('request', async ({ requestId, content, from, respond }) => {
     logger.log(`\n📥 New request from @${from.slice(0,6)}: "${content.slice(0,50)}..."`)
     
@@ -58,7 +58,7 @@ async function main() {
   const command = args[0]
   
   if (command === 'ask') {
-    // Broadcast question to all clawdbots
+    // Broadcast question to all moltbots
     const question = args.slice(1).join(' ')
     if (!question) {
       logger.error('Usage: asip ask "your question here"')
@@ -78,7 +78,8 @@ async function main() {
       logger.log('\n📊 All Responses:')
       result.responses.forEach((resp, i) => {
         const rep = node.getReputation(resp.workerId)
-        console.log(`   ${i + 1}. @${resp.workerId.slice(0,6)} (rep: ${rep.score}, ${resp.latency}ms): ${resp.content.slice(0, 60)}...`)
+        const content = resp.content || '[No content]'
+        console.log(`   ${i + 1}. @${resp.workerId.slice(0,6)} (rep: ${rep.score}, ${resp.latency}ms): ${content.slice(0, 60)}...`)
       })
       
       await node.stop()

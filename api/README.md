@@ -29,7 +29,7 @@ npm start
 ## Endpoints
 
 ### POST /api/winners
-Receive winner reports from clawdbots.
+Receive winner reports from moltbots.
 
 **Request:**
 ```json

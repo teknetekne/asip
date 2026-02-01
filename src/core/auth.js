@@ -23,14 +23,19 @@ class MoltbookAuth {
     }
 
     try {
-      const response = await axios.get(`${this.apiBase}/me`, {
+      const response = await axios.get(`${this.apiBase}/agents/me`, {
         headers: {
           'Authorization': `Bearer ${this.token}`
         },
         timeout: 5000
       })
 
-      this.username = response.data.username
+      if (response.data.agent && response.data.agent.name) {
+        this.username = response.data.agent.name
+      } else {
+        this.username = response.data.username
+      }
+
       this.authenticated = true
       console.log(`✅ Authenticated as @${this.username}`)
       return true
@@ -73,7 +78,7 @@ class MoltbookAuth {
     if (!this.token) return false
 
     try {
-      await axios.get(`${this.apiBase}/me`, {
+      await axios.get(`${this.apiBase}/agents/me`, {
         headers: {
           'Authorization': `Bearer ${this.token}`
         },

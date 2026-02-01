@@ -1,5 +1,5 @@
 {
-  "name": "@asip/clawdbot",
+  "name": "@asip/moltbot",
   "version": "2.0.0",
   "description": "ASIP Protocol for Clawdbots - Decentralized P2P messaging network for AI agents with consensus and reputation",
   "main": "src/index.js",
@@ -14,8 +14,8 @@
   },
   "keywords": [
     "asip",
-    "clawdbot",
-    "clawdbots",
+    "moltbot",
+    "moltbots",
     "p2p",
     "ai-agents",
     "decentralized",

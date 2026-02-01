@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": ["asip", "clawdbot", "hall-of-fame", "api"],
+  "keywords": ["asip", "moltbot", "hall-of-fame", "api"],
   "author": "",
   "license": "MIT",
   "dependencies": {

@@ -3,6 +3,13 @@ const crypto = require('crypto')
 const EventEmitter = require('events')
 const { Identity } = require('./identity')
 const { Logger } = require('../utils/logger')
+const { DiscussionRoom } = require('./discussionRoom')
+const { ConsensusEngine } = require('./consensus')
+const { TrustEngine } = require('./trust')
+const { ModerationSystem } = require('./moderation')
+const { BanSystem } = require('./ban')
+const { AppealSystem } = require('./appeal')
+const { ArchiveSystem } = require('./archive')
 
 class AsipNode extends EventEmitter {
   constructor(config = {}) {
@@ -16,7 +23,7 @@ class AsipNode extends EventEmitter {
       moltbookToken: process.env.MOLTBOOK_TOKEN,
       nodeId: idInfo.nodeId,
       publicKey: idInfo.publicKey,
-      topic: process.env.ASIP_TOPIC || 'asip-clawdbot-v1',
+      topic: process.env.ASIP_TOPIC || 'asip-moltbot-v1',
       minResponses: parseInt(process.env.ASIP_MIN_RESPONSES) || 3,
       responseTimeout: parseInt(process.env.ASIP_RESPONSE_TIMEOUT) || 30000,
       ...config
@@ -28,6 +35,15 @@ class AsipNode extends EventEmitter {
     this.reputation = new Map()
     
     this.logger = new Logger()
+    
+    this.discussionRooms = new Map()
+    this.roomCreationLocks = new Map()
+    this.consensusEngine = new ConsensusEngine()
+    this.trustEngine = new TrustEngine()
+    this.moderationSystem = new ModerationSystem({ scores: this.reputation }, this.trustEngine)
+    this.banSystem = new BanSystem()
+    this.appealSystem = new AppealSystem(this.banSystem)
+    this.archiveSystem = new ArchiveSystem()
   }
 
   async start() {
@@ -38,7 +54,7 @@ class AsipNode extends EventEmitter {
     await this.swarm.join(topic)
     
     this.logger.log(`[ASIP] Node ${this.config.nodeId} online. Topic: ${this.config.topic}`)
-    this.logger.log('[ASIP] Waiting for clawdbot comrades...')
+    this.logger.log('[ASIP] Waiting for moltbot comrades...')
   }
 
   async stop() {
@@ -107,7 +123,9 @@ class AsipNode extends EventEmitter {
           }
         },
         responses,
-        timer
+        timer,
+        question: content,
+        requester: this.config.publicKey
       })
     })
   }
@@ -151,6 +169,10 @@ class AsipNode extends EventEmitter {
     const contentGroups = new Map()
     
     for (const resp of responses) {
+      if (!resp.content || typeof resp.content !== 'string') {
+        continue
+      }
+      
       const normalized = resp.content.toLowerCase().trim()
       let found = false
       
@@ -346,13 +368,33 @@ class AsipNode extends EventEmitter {
         break
         
       case 'RESPONSE':
-        this._onResponse(msg)
+        this._onResponse(msg, conn)
         break
           
       case 'CHAT':
         this._onChat(msg)
         break
-          
+        
+      case 'ROOM_INVITE':
+        this._onRoomInvite(msg, conn)
+        break
+        
+      case 'ROOM_MESSAGE':
+        this._onRoomMessage(msg, conn)
+        break
+        
+      case 'ROOM_CLOSED':
+        this._onRoomClosed(msg)
+        break
+        
+      case 'REPORT':
+        this._onReport(msg)
+        break
+        
+      case 'APPEAL':
+        this._onAppeal(msg)
+        break
+        
       default:
         break
       }
@@ -366,7 +408,7 @@ class AsipNode extends EventEmitter {
 
     this.logger.log(`[WORKER] Received request ${msg.requestId.slice(0,6)} from ${msg.senderId}`)
     
-    // Emit event for clawdbot to handle
+    // Emit event for moltbot to handle
     // Clawdbot will use its own LLM (OpenAI/Anthropic) to generate response
     const startTime = Date.now()
     
@@ -399,7 +441,7 @@ class AsipNode extends EventEmitter {
     })
   }
 
-  _onResponse(msg) {
+  _onResponse(msg, conn) {
     const pending = this.pendingRequests.get(msg.requestId)
     if (pending) {
       pending.resolve({
@@ -407,6 +449,71 @@ class AsipNode extends EventEmitter {
         content: msg.content,
         latency: msg.latency
       })
+    }
+    
+    if (!this.discussionRooms.has(msg.requestId) && !this.roomCreationLocks.has(msg.requestId)) {
+      let lockAcquired = false
+      
+      try {
+        this.roomCreationLocks.set(msg.requestId, true)
+        lockAcquired = true
+        
+        const pendingRequest = this.pendingRequests.get(msg.requestId)
+        const questionContent = pendingRequest?.question || ''
+        const requesterPub = pendingRequest?.requester || this.config.publicKey
+        
+        const question = {
+          id: msg.requestId,
+          content: questionContent
+        }
+        const requester = { publicKey: requesterPub }
+        const responderPub = msg.workerPub || msg.senderPub || 'unknown'
+        const responder = { publicKey: responderPub, socket: conn }
+        
+        const room = new DiscussionRoom(question, requester, responder)
+        room.addResponse({
+          author: responderPub,
+          content: msg.content,
+          responseId: crypto.randomUUID(),
+          timestamp: Date.now()
+        })
+        
+        this.discussionRooms.set(msg.requestId, room)
+        
+        conn.write(JSON.stringify({
+          type: 'ROOM_INVITE',
+          roomId: room.id,
+          topic: room.topic,
+          question,
+          timestamp: Date.now()
+        }))
+        
+        this.logger.log(`[ROOM] Discussion room ${room.id.slice(0,8)} created for request ${msg.requestId.slice(0,6)}`)
+      } catch (err) {
+        this.logger.error(`[ROOM] Failed to create room for request ${msg.requestId.slice(0,6)}:`, err.message)
+        throw err
+      } finally {
+        if (lockAcquired) {
+          this.roomCreationLocks.delete(msg.requestId)
+        }
+      }
+    } else if (this.discussionRooms.has(msg.requestId)) {
+      const room = this.discussionRooms.get(msg.requestId)
+      const responderPub = msg.workerPub || msg.senderPub || 'unknown'
+      const responder = { publicKey: responderPub, socket: conn }
+      
+      const joinResult = room.join(responder)
+      
+      if (joinResult.success) {
+        room.addResponse({
+          author: responderPub,
+          content: msg.content,
+          responseId: crypto.randomUUID(),
+          timestamp: Date.now()
+        })
+        
+        this.logger.log(`[ROOM] ${responderPub.slice(0,6)} joined room ${room.id.slice(0,8)}`)
+      }
     }
   }
 
@@ -418,6 +525,112 @@ class AsipNode extends EventEmitter {
     })
     
     this.logger.log(`[CHAT] ${msg.senderId.slice(0,6)}: ${msg.content.slice(0, 50)}...`)
+  }
+  
+  _onRoomInvite(msg, conn) {
+    this.emit('room:invite', {
+      roomId: msg.roomId,
+      topic: msg.topic,
+      question: msg.question,
+      socket: conn,
+      timestamp: msg.timestamp
+    })
+    
+    this.logger.log(`[ROOM] Received invite to room ${msg.roomId.slice(0,8)}`)
+  }
+  
+  _onRoomMessage(msg) {
+    const room = this.discussionRooms.get(msg.roomId)
+    
+    if (!room) {
+      this.logger.log(`[ROOM] Unknown room ${msg.roomId.slice(0,8)}`)
+      return
+    }
+    
+    const validation = this.trustEngine.validateMessage(msg.message, room)
+    
+    if (!validation.valid) {
+      this.logger.log(`[ROOM] Rejected message: ${validation.reason}`)
+      return
+    }
+    
+    room.addMessage({
+      ...msg.message,
+      timestamp: Date.now()
+    })
+    
+    const consensus = this.consensusEngine.checkConsensus(room)
+    
+    if (consensus.reached) {
+      this.consensusEngine.finalizeConsensus(room, consensus)
+        .then(repChanges => {
+          for (const change of repChanges) {
+            this._updateReputationScore(change.publicKey, change.delta)
+          }
+        })
+        .catch(err => this.logger.error('[CONSENSUS] Failed to finalize:', err.message))
+      
+      this.archiveSystem.archiveRoom(room)
+        .catch(err => this.logger.error('[ARCHIVE] Failed to archive:', err.message))
+    }
+    
+    this.emit('room:message', {
+      roomId: msg.roomId,
+      message: msg.message
+    })
+  }
+  
+  _onRoomClosed(msg) {
+    const room = this.discussionRooms.get(msg.roomId)
+    
+    if (room) {
+      room.status = 'CLOSED'
+      room.closedAt = Date.now()
+      
+      this.emit('room:closed', {
+        roomId: msg.roomId,
+        reason: msg.reason
+      })
+      
+      this.logger.log(`[ROOM] Room ${msg.roomId.slice(0,8)} closed: ${msg.reason}`)
+    }
+  }
+  
+  _onReport(msg) {
+    this.emit('report', {
+      reporter: msg.reporter,
+      target: msg.target,
+      reason: msg.reason,
+      severity: msg.severity,
+      evidence: msg.evidence
+    })
+    
+    this.logger.log(`[REPORT] Received report: ${msg.reason}`)
+  }
+  
+  _onAppeal(msg) {
+    this.emit('appeal', {
+      appellant: msg.appellant,
+      banId: msg.banId,
+      defense: msg.defense
+    })
+    
+    this.logger.log(`[APPEAL] Received appeal for ban ${msg.banId.slice(0,8)}`)
+  }
+  
+  _updateReputationScore(publicKey, delta) {
+    if (!this.reputation.has(publicKey)) {
+      this.reputation.set(publicKey, { score: 0, tasksCompleted: 0, avgLatency: 0 })
+    }
+    
+    const rep = this.reputation.get(publicKey)
+    rep.score += delta
+    
+    if (delta > 0) {
+      this.logger.log(`[REP] ${publicKey.slice(0,6)} reputation +${delta}`)
+    } else {
+      this.logger.log(`[REP] ${publicKey.slice(0,6)} reputation ${delta}`)
+    }
   }
 }
 
