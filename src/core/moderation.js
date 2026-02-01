@@ -79,6 +79,7 @@ class ModerationSystem {
   }
   
   selectModerators(report, count = 5) {
+    // COMMISSAR tier (150+) can be moderators
     const eligibleNodes = this.reputationSystem.scores ?
       Array.from(this.reputationSystem.scores.entries())
         .filter(([_nodeId, score]) => score >= 150)

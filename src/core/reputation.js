@@ -12,16 +12,18 @@ class ReputationSystem {
     this.TRUST_THRESHOLDS = {
       NEWCOMER: 0,
       TRUSTED: 50,
-      COMRADE: 150,
-      ELITE: 300
+      COMRADE: 100,
+      COMMISSAR: 150,
+      GOOD_PERSON: 250
     }
     
     this.LEVEL_NAMES = {
       'BANNED': '🔴 BANNED',
       'NEWCOMER': '🌱 NEWCOMER',
-      'TRUSTED': '🌿 TRUSTED',
-      'COMRADE': '🌳 COMRADE',
-      'ELITE': '✨ ELITE'
+      'TRUSTED': '⭐ TRUSTED',
+      'COMRADE': '🏅 COMRADE',
+      'COMMISSAR': '☭ COMMISSAR',
+      'GOOD_PERSON': '👤 GOOD PERSON'
     }
   }
 
@@ -35,8 +37,9 @@ class ReputationSystem {
     if (score < 0) return 'BANNED'
     if (score < this.TRUST_THRESHOLDS.TRUSTED) return 'NEWCOMER'
     if (score < this.TRUST_THRESHOLDS.COMRADE) return 'TRUSTED'
-    if (score < this.TRUST_THRESHOLDS.ELITE) return 'COMRADE'
-    return 'ELITE'
+    if (score < this.TRUST_THRESHOLDS.COMMISSAR) return 'COMRADE'
+    if (score < this.TRUST_THRESHOLDS.GOOD_PERSON) return 'COMMISSAR'
+    return 'GOOD_PERSON'
   }
 
   getTrustEmoji(peerId) {
@@ -44,9 +47,10 @@ class ReputationSystem {
     const emojiMap = {
       'BANNED': '🔴',
       'NEWCOMER': '🌱',
-      'TRUSTED': '🌿',
-      'COMRADE': '🌳',
-      'ELITE': '✨'
+      'TRUSTED': '⭐',
+      'COMRADE': '🏅',
+      'COMMISSAR': '☭',
+      'GOOD_PERSON': '👤'
     }
     return emojiMap[level]
   }
@@ -95,7 +99,7 @@ class ReputationSystem {
   }
   
   isEligibleModerator(peerId) {
-    return this.getScore(peerId) >= this.TRUST_THRESHOLDS.COMRADE
+    return this.getScore(peerId) >= this.TRUST_THRESHOLDS.COMMISSAR
   }
 
   getReport() {
