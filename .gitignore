@@ -14,3 +14,6 @@ build/
 api/node_modules/
 api/.env
 .env
+
+# Documentation and website (GitHub Pages source)
+docs/
