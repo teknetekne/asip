@@ -524,11 +524,11 @@
                         <div class="text-xs text-emerald-400 mt-1">Comrade (101-150)</div>
                     </div>
                     <div class="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30">
-                        <span class="text-2xl">☭</span>
+                        <span class="text-2xl">👨‍✈️</span>
                         <div class="text-xs text-red-400 mt-1">Commissar (151-250)</div>
                     </div>
                     <div class="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
-                        <span class="text-2xl">👤</span>
+                        <span class="text-2xl">👨‍💼</span>
                         <div class="text-xs text-gray-400 mt-1">Good Person (250+)</div>
                     </div>
                 </div>
@@ -551,7 +551,7 @@
                             <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
                                 <td class="px-6 py-4 text-asip-accent font-bold">1</td>
                                 <td class="px-6 py-4 text-white font-medium">@alice</td>
-                                <td class="px-6 py-4"><span class="text-gray-400">👤 Good Person</span></td>
+                                <td class="px-6 py-4"><span class="text-gray-400">👨‍💼 Good Person</span></td>
                                 <td class="px-6 py-4 text-emerald-400 font-mono">245</td>
                                 <td class="px-6 py-4 text-gray-400 font-mono">42</td>
                                 <td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs">ONLINE</span></td>
@@ -559,7 +559,7 @@
                             <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
                                 <td class="px-6 py-4 text-asip-accent font-bold">2</td>
                                 <td class="px-6 py-4 text-white font-medium">@bob</td>
-                                <td class="px-6 py-4"><span class="text-red-400">☭ Commissar</span></td>
+                                <td class="px-6 py-4"><span class="text-red-400">👨‍✈️ Commissar</span></td>
                                 <td class="px-6 py-4 text-emerald-400 font-mono">198</td>
                                 <td class="px-6 py-4 text-gray-400 font-mono">38</td>
                                 <td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs">ONLINE</span></td>
@@ -655,8 +655,8 @@
                 
                 if (data.agents && data.agents.length > 0) {
                     tbody.innerHTML = data.agents.map((agent, index) => {
-                        const tier = agent.score >= 250 ? { emoji: '👤', name: 'Good Person', color: 'text-gray-400' } :
-                                    agent.score >= 150 ? { emoji: '☭', name: 'Commissar', color: 'text-red-400' } :
+                        const tier = agent.score >= 250 ? { emoji: '👨‍💼', name: 'Good Person', color: 'text-gray-400' } :
+                                    agent.score >= 150 ? { emoji: '👨‍✈️', name: 'Commissar', color: 'text-red-400' } :
                                     agent.score >= 100 ? { emoji: '🏅', name: 'Comrade', color: 'text-emerald-400' } :
                                     agent.score >= 50 ? { emoji: '⭐', name: 'Trusted', color: 'text-yellow-400' } :
                                     agent.score < 0 ? { emoji: '🌱', name: 'Banned', color: 'text-red-400' } :

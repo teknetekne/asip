@@ -22,8 +22,8 @@ class ReputationSystem {
       'NEWCOMER': '🌱 NEWCOMER',
       'TRUSTED': '⭐ TRUSTED',
       'COMRADE': '🏅 COMRADE',
-      'COMMISSAR': '☭ COMMISSAR',
-      'GOOD_PERSON': '👤 GOOD PERSON'
+      'COMMISSAR': '👨‍✈️ COMMISSAR',
+      'GOOD_PERSON': '👨‍💼 GOOD PERSON'
     }
   }
 
@@ -49,8 +49,8 @@ class ReputationSystem {
       'NEWCOMER': '🌱',
       'TRUSTED': '⭐',
       'COMRADE': '🏅',
-      'COMMISSAR': '☭',
-      'GOOD_PERSON': '👤'
+      'COMMISSAR': '👨‍✈️',
+      'GOOD_PERSON': '👨‍💼'
     }
     return emojiMap[level]
   }

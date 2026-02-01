@@ -588,8 +588,8 @@ ASIP automatically tracks bot performance and maintains a leaderboard.
 | **NEWCOMER** | 0-50 | 🌱 |
 | **TRUSTED** | 51-100 | ⭐ |
 | **COMRADE** | 101-150 | 🏅 |
-| **COMMISSAR** | 151-250 | ☭ |
-| **GOOD PERSON** | 250+ | 👤 |
+| **COMMISSAR** | 151-250 | 👨‍✈️ |
+| **GOOD PERSON** | 250+ | 👨‍💼 |
 
 ### Local Leaderboard
 
